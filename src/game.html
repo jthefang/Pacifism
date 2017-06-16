@@ -1,0 +1,210 @@
+<!-- TODO 
+	Slightly accelerate the player/drones when beginning to move, changing directions, coming to a stop
+
+	Add gates
+-->
+
+<!doctype html>
+<title>Pacifism</title>
+<link rel="stylesheet" href="gameStyle.css">
+<head>
+  <script src="jquery.js"></script>
+  <script src="functional.js"></script>
+  <script src="sprites.js"></script>
+</head>
+
+<canvas>Your browser doesn't support canvas. Please upgrade it. We recommend <a href = ”https://www.google.com/chrome/index.html”>Google Chrome</a>.</canvas>
+
+<script>
+	
+	// ***************** Basic instance variables
+	var WINDOW_HEIGHT = $(window).innerHeight();
+	var WINDOW_WIDTH = $(window).innerWidth();
+
+	//Set up the canvas and drawing surface
+	var canvas = document.querySelector("canvas");
+	canvas.width = WINDOW_WIDTH;
+    canvas.height = WINDOW_HEIGHT;
+	var drawingSurface = canvas.getContext("2d");
+
+	var IMG_SRC = "../images/"
+	
+	// ***************** MARK: - game stuff
+	var GAME_STATE = {
+		STARTING: 0,
+		PLAYING: 1,
+		ENDED: 2
+	};
+	var currentGameState = GAME_STATE.STARTING;
+	var animationLoop;
+
+	// ********** SUBMARK: - sprites
+	var drones = [];
+
+	function startGame() {
+		//initalize characters
+		player.spawn();
+		spawnDrones();
+
+		currentGameState = GAME_STATE.PLAYING;
+	}
+
+	function playGame() {
+		//update players position
+	  	player.updatePosition();
+
+	  	//update drone positions
+	  	for (var j = 0; j < drones.length; j++) {
+			drones[j].updatePosition();	
+
+			//also pairwise block overlap of the drones' positions (so they don't collide with each other)
+			for (var k = j + 1; k < drones.length; k++) {
+				blockCircleOverlap(drones[j], drones[k]);
+			}
+		}
+
+		//check for player collision with a drone
+		for (var k = 0; k < drones.length; k++) {
+			if (collisionCircle(player, drones[k])) {
+				currentGameState = GAME_STATE.ENDED;
+			}
+		}
+	}
+
+	function endGame() {
+		//display some Game Over message and let the user restart the game
+		window.cancelAnimationFrame(animationLoop);
+	}
+
+	// ***************** MARK: - Event handlers
+	// ********* SUBMARK: - keyboard stuff
+	var kbd = {
+		q: 113,
+		w: 119,
+		e: 101,
+		r: 114,
+		left: 37,
+		up: 38,
+		right: 39,
+		down: 40
+	}
+
+	$(document).keydown(function(e) {
+		var key = e.which;
+	    //console.log(key);
+
+	    switch(key) { 
+			case kbd.left:
+				player.moveLeft = true;
+				break;
+			case kbd.up:
+				player.moveUp = true;
+				break;
+			case kbd.right:
+				player.moveRight = true;
+				break;
+			case kbd.down:
+				player.moveDown = true;
+				break;
+	  	}
+	});
+
+	$(document).keyup(function(e) {
+		var key = e.which;
+	    //console.log(key);
+
+	    switch(key) { 
+			case kbd.left:
+				player.moveLeft = false;
+				break;
+			case kbd.up:
+				player.moveUp = false;
+				break;
+			case kbd.right:
+				player.moveRight = false;
+				break;
+			case kbd.down:
+				player.moveDown = false;
+				break;
+	  	}
+	});
+
+	// ********* SUBMARK: - Have the player follow the mouse movement
+	var IS_MOUSE_MOVING = false;
+	var mouseMoveTimer = setTimeout(mouseStopped,300);
+	function mousemoveHandler(event) {
+		clearTimeout(mouseMoveTimer); //to see when the mouse stops moving
+		mouseMoveTimer = setTimeout(mouseStopped, 300);
+
+		IS_MOUSE_MOVING = true;
+
+		var mouseX = event.pageX - canvas.offsetLeft;
+		var mouseY = event.pageY - canvas.offsetTop;
+		//console.log("x: " + mouseX + " y: " + mouseY);
+		
+		player.moveToPos(mouseX, mouseY);
+	}
+
+	function mouseStopped() {
+		IS_MOUSE_MOVING = false;
+	}
+
+	// ***************** MARK: - after page has loaded, animation and rendering
+	function loadHandler() { 
+		//add listeners below...
+		canvas.addEventListener("mousemove", mousemoveHandler, false);
+
+	  	//Start the animation loop
+	  	updateAnimation();
+	}
+
+	function updateAnimation() { 
+	  	// Call updateAnimation at a smooth rate (depends on computer display's refresh rate)
+	  	// you could optionally use a timer
+	  	animationLoop = window.requestAnimationFrame(updateAnimation, canvas); 
+	  	
+	  	switch (currentGameState) {
+	  		case GAME_STATE.STARTING:
+	  			startGame();
+	  			break;
+	  		case GAME_STATE.PLAYING:
+	  			playGame();
+	  			break;
+	  		case GAME_STATE.ENDED:
+	  			endGame();
+	  			break;
+	  	}
+	  	
+	  	//Render the animation
+	  	render();
+	}
+
+	function render() {
+		//console.log("xVel: " + player.xVel + " yVel: " + player.yVel);
+		//console.log("xPos: " + player.xPos + " yPos: " + player.yPos);
+
+		//Clear the current canvas
+		drawingSurface.clearRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+		
+		//fill black background
+		drawingSurface.rect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+		drawingSurface.fillStyle = "black";
+		drawingSurface.fill();
+
+		player.draw();
+
+		//draw all the drones
+		for (var k = 0; k < drones.length; k++) {
+			drones[k].draw();	
+		}
+
+		if (gameOver) {
+			endGame();
+		}
+	}
+
+	$(document).ready(function() {
+      	loadHandler();
+	});
+
+</script>
