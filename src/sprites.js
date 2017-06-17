@@ -191,7 +191,7 @@ var player = {
 };
 
 var gateSpawnTimer;
-var gateSpawnFrequency = 5000; //every 5 seconds, spawn droneSpawnAmount of drones 
+var gateSpawnFrequency = 8000; //every 5 seconds, spawn droneSpawnAmount of drones 
 var gate = {
 	imgSrc: "gate.png",
 
@@ -214,6 +214,9 @@ var gate = {
 
 	updatePosition: function() {
 		this.rotation += this.rotationSpeed;
+      	if (this.checkCollisionWith(player)) {
+      		this.explode();
+      	}
 	},
 
 	draw: function() {
@@ -221,8 +224,8 @@ var gate = {
 		drawingSurface.save();
 		//Rotate the canvas
 		drawingSurface.translate( // this shifts the whole canvas to be zeroed at the center of the rotated object 
-			Math.floor(this.xPos + (this.width / 2)),
-			Math.floor(this.yPos + (this.width / 2))
+			Math.floor(this.xPos), 
+			Math.floor(this.yPos) 
 		);
 		drawingSurface.rotate(this.rotation * Math.PI / 180);
 		
@@ -234,8 +237,38 @@ var gate = {
 			Math.floor(-this.width / 2), Math.floor(-this.height / 2),
 			this.width, this.height
 		);
+
 		//Restore the drawing surface to its state before it was rotated (but this time with the rotated sprite still in place)
 		drawingSurface.restore();
+
+		/*
+		//also draw a dot at the center of the gate)
+		drawingSurface.beginPath();
+		drawingSurface.arc(Math.floor(this.xPos), Math.floor(this.yPos), 5, 0, 2 * Math.PI, false);
+		drawingSurface.fillStyle = "white";
+      	drawingSurface.fill();
+      	*/
+	},
+
+	/**
+		Check the angle
+	*/
+	checkCollisionWith: function(circle) { 
+		//console.log(Math.atan2(this.yPos, this.xPos));
+		var dx = circle.xPos - this.xPos;
+		var dy = circle.yPos - this.yPos;
+		var distCircleGate = Math.sqrt((dx*dx) + (dy*dy));
+		var angleCircleGate = Math.atan2(dy, dx) - (this.rotation * Math.PI / 180);
+		if (Math.abs(distCircleGate * Math.cos(angleCircleGate)) < this.width / 2) {
+			if (Math.abs(distCircleGate * Math.sin(angleCircleGate)) < circle.radius) {
+				return true;
+			}
+		}
+		return false;
+	},
+
+	explode: function() {
+		removeObjectFromArray(this, gates);
 	},
 
 	spawn: function(corner) { 

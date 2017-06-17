@@ -1,7 +1,7 @@
 <!-- TODO 
-	Slightly accelerate the player/drones when beginning to move, changing directions, coming to a stop
+	Gates explode functionality
 
-	Add gates
+	Slightly accelerate the player/drones when beginning to move, changing directions, coming to a stop
 -->
 
 <!doctype html>
@@ -27,8 +27,8 @@
     canvas.height = WINDOW_HEIGHT;
 	var drawingSurface = canvas.getContext("2d");
 	
-	// ***************** MARK: - game stuff
 	var IMG_SRC = "../images/";
+	// ***************** MARK: - game stuff
 	var endable = false; //will determine whether the game ends if player collides with drones
 	var GAME_STATE = {
 		LOADING: 0,

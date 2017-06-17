@@ -33,3 +33,10 @@ function blockCircleOverlap(c1, c2) {
 		c1.yPos += overlap * dy;
 	}
 }
+
+function removeObjectFromArray(objectToRemove, array) { //a general function to remove objects from an array
+	var i = array.indexOf(objectToRemove);
+	if (i !== -1) {
+		array.splice(i, 1);
+	}
+}
