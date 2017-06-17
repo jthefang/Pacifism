@@ -26,25 +26,36 @@
 	canvas.width = WINDOW_WIDTH;
     canvas.height = WINDOW_HEIGHT;
 	var drawingSurface = canvas.getContext("2d");
-
-	var IMG_SRC = "../images/"
 	
 	// ***************** MARK: - game stuff
+	var IMG_SRC = "../images/";
+	var endable = false; //will determine whether the game ends if player collides with drones
 	var GAME_STATE = {
-		STARTING: 0,
-		PLAYING: 1,
-		ENDED: 2
+		LOADING: 0,
+		STARTING: 1,
+		PLAYING: 2,
+		ENDED: 3
 	};
-	var currentGameState = GAME_STATE.STARTING;
+	var currentGameState = GAME_STATE.LOADING;
 	var animationLoop;
+
+	// ********** SUBMARK: - assets
+	var assetsToLoad = [];
+	var assetsLoaded = 0;
+	var gateImage = new Image();
+	gateImage.addEventListener("load", loadHandler, false);
+	gateImage.src = IMG_SRC + gate.imgSrc;
+	assetsToLoad.push(gateImage);
 
 	// ********** SUBMARK: - sprites
 	var drones = [];
+	var gates = [];
 
 	function startGame() {
 		//initalize characters
 		player.spawn();
 		spawnDrones();
+		spawnGate();
 
 		currentGameState = GAME_STATE.PLAYING;
 	}
@@ -65,9 +76,14 @@
 
 		//check for player collision with a drone
 		for (var k = 0; k < drones.length; k++) {
-			if (collisionCircle(player, drones[k])) {
+			if (collisionCircle(player, drones[k]) && endable) {
 				currentGameState = GAME_STATE.ENDED;
 			}
+		}
+
+		//update gate positions
+	  	for (var i = 0; i < gates.length; i++) {
+			gates[i].updatePosition();	
 		}
 	}
 
@@ -154,8 +170,15 @@
 		//add listeners below...
 		canvas.addEventListener("mousemove", mousemoveHandler, false);
 
-	  	//Start the animation loop
-	  	updateAnimation();
+		assetsLoaded++;
+		if(assetsLoaded == assetsToLoad.length) {
+			//Remove the load event listener
+			gateImage.removeEventListener("load", loadHandler, false);
+			 
+			//Start the game
+			currentGameState = GAME_STATE.STARTING;
+		}
+		console.log(currentGameState);
 	}
 
 	function updateAnimation() { 
@@ -164,6 +187,8 @@
 	  	animationLoop = window.requestAnimationFrame(updateAnimation, canvas); 
 	  	
 	  	switch (currentGameState) {
+	  		case GAME_STATE.LOADING:
+	  			break;
 	  		case GAME_STATE.STARTING:
 	  			startGame();
 	  			break;
@@ -198,13 +223,15 @@
 			drones[k].draw();	
 		}
 
-		if (gameOver) {
-			endGame();
+		//draw all the gates
+		for (var m = 0; m < gates.length; m++) {
+			gates[m].draw();	
 		}
 	}
 
 	$(document).ready(function() {
-      	loadHandler();
+	  	//Start the animation loop
+	  	updateAnimation();
 	});
 
 </script>

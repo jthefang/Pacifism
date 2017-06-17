@@ -1,5 +1,3 @@
-var IMG_SRC = "../images/"
-
 var droneSpawnAmount = 20;
 var droneSpawnTimer;
 var droneSpawnFrequency = 5000; //every 5 seconds, spawn droneSpawnAmount of drones 
@@ -192,22 +190,76 @@ var player = {
 	}	
 };
 
+var gateSpawnTimer;
+var gateSpawnFrequency = 5000; //every 5 seconds, spawn droneSpawnAmount of drones 
 var gate = {
-	imageSrc: IMG_SRC + "gate.png",
+	imgSrc: "gate.png",
+
+	sourceX: 0,
+	sourceY: 0,
+	sourceWidth: 1000,
+	sourceHeight: 150,
+
+	width: 100,
+	height: 15,
 	xPos: 0,
 	yPos: 0,
+	
 	rotation: 0,
-	rotationSpeed: 0,
+	rotationSpeed: 0.6, //degrees per frame
 
-	movementSpeed: 0,
+	movementSpeed: 6,
 	xVel: 0,
 	yVel: 0,
 
 	updatePosition: function() {
-
+		this.rotation += this.rotationSpeed;
 	},
 
 	draw: function() {
+		//Save the current state of the drawing surface before it's rotated
+		drawingSurface.save();
+		//Rotate the canvas
+		drawingSurface.translate( // this shifts the whole canvas to be zeroed at the center of the rotated object 
+			Math.floor(this.xPos + (this.width / 2)),
+			Math.floor(this.yPos + (this.width / 2))
+		);
+		drawingSurface.rotate(this.rotation * Math.PI / 180);
+		
+		//Stamp the image of the rotated object (which, since the canvas is zeroed about it’s center, should be drawn half its height upwards and half its width leftwards)
+		drawingSurface.drawImage(
+			gateImage,
+			this.sourceX, this.sourceY,
+			this.sourceWidth, this.sourceHeight,
+			Math.floor(-this.width / 2), Math.floor(-this.height / 2),
+			this.width, this.height
+		);
+		//Restore the drawing surface to its state before it was rotated (but this time with the rotated sprite still in place)
+		drawingSurface.restore();
+	},
 
+	spawn: function(corner) { 
+		var maxX = canvas.width - this.width;
+		var maxY = canvas.height - this.width;
+		var minX = this.width;
+		var minY = this.width;
+
+		var randX = Math.floor(Math.random() * (maxX - minX) + minX); 
+		var randY = Math.floor(Math.random() * (maxY - minY) + minY); 
+		var randAngle = Math.floor(Math.random() * 180);
+
+		this.xPos = randX;
+		this.yPos = randY;
+		this.rotation = randAngle;
+		gates.push(this); //this is an array in the game.html
 	}
+};
+function spawnGate() {
+	var newGate = Object.create(gate);
+	newGate.spawn();	
+
+	if (typeof gateSpawnTimer != 'undefined') {
+		clearTimeout(gateSpawnTimer);	
+	}
+	gateSpawnTimer = setTimeout(spawnGate, gateSpawnFrequency); //reset timer to spawn in another gateSpawnFrequency seconds
 }
