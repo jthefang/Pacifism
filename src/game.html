@@ -175,6 +175,14 @@
 		window.cancelAnimationFrame(animationLoop);
 	}
 
+	function restartGame() {
+		drones = [];
+		gates = [];
+		explosions = [];
+
+		startGame();
+	}
+
 	function applyMenuSettings() {
 		var inputMethod = $('input[name="inputMethod"]:checked').val();
 		if (inputMethod === "mouse") {
@@ -189,10 +197,7 @@
 	// ***************** MARK: - Event handlers
 	// ********* SUBMARK: - keyboard stuff
 	var kbd = {
-		q: 113,
-		w: 119,
-		e: 101,
-		r: 114,
+		r: 82,
 		p: 80,
 		esc: 27,
 		left: 37,
@@ -221,6 +226,9 @@
 			case kbd.p:
 	    		togglePause();
 	    		break;
+	    	case kbd.r:
+	    		restartGame();
+	    		break;
 	    	case kbd.esc:
 	    		togglePause();
 	    		$("div#menu").toggle();
@@ -228,7 +236,6 @@
 	    			//apply new settings
 	    			applyMenuSettings();
 	    		}
-
 	    		break;
 	  	}
 	});
