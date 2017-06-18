@@ -1,5 +1,11 @@
 <!-- TODO 
-	Gates explode functionality
+	Score
+
+	Have the game level up
+
+	Add techno music sound FX
+
+	Player mouse movement targetting, use if to move the player differently/updatePosition if the mouse is being used
 
 	Slightly accelerate the player/drones when beginning to move, changing directions, coming to a stop
 -->
@@ -13,7 +19,31 @@
   <script src="sprites.js"></script>
 </head>
 
-<canvas>Your browser doesn't support canvas. Please upgrade it. We recommend <a href = ”https://www.google.com/chrome/index.html”>Google Chrome</a>.</canvas>
+<div id="container">
+	<canvas>Your browser doesn't support canvas. Please upgrade it. We recommend <a href = ”https://www.google.com/chrome/index.html”>Google Chrome</a>.</canvas>
+
+	<div id="menu">
+		<form>
+		  <input type="radio" name="inputMethod" id="mouse" value="mouse" checked><label for="mouse"> Mouse</label><br>
+		  <input type="radio" name="inputMethod" id="kbd" value="kbd"><label for="kbd"> Keyboard</label><br>
+		</form>
+		<br>
+
+		<table>
+			<tr>
+				<td>P</td>
+				<td>Pause/Play</td>
+			</tr>
+
+			<tr>
+				<td>R</td>
+				<td>Restart</td>
+			</tr>
+		</table>
+	</div>	
+
+	<p id="help_hint">Press ESC for Menu</p>
+</div>
 
 <script>
 	
@@ -29,12 +59,20 @@
 	
 	var IMG_SRC = "../images/";
 	// ***************** MARK: - game stuff
-	var endable = false; //will determine whether the game ends if player collides with drones
+	var endable = true; //will determine whether the game ends if player collides with drones
+	
+	var controlMethod = {
+		MOUSE: 0,
+		KBD: 1
+	}
+	var currentControlMethod = controlMethod.MOUSE;
+
 	var GAME_STATE = {
 		LOADING: 0,
 		STARTING: 1,
 		PLAYING: 2,
-		ENDED: 3
+		PAUSED: 3,
+		ENDED: 4
 	};
 	var currentGameState = GAME_STATE.LOADING;
 	var animationLoop;
@@ -42,14 +80,37 @@
 	// ********** SUBMARK: - assets
 	var assetsToLoad = [];
 	var assetsLoaded = 0;
+
 	var gateImage = new Image();
 	gateImage.addEventListener("load", loadHandler, false);
 	gateImage.src = IMG_SRC + gate.imgSrc;
 	assetsToLoad.push(gateImage);
 
+	var burstImage = new Image();
+	burstImage.addEventListener("load", loadHandler, false);
+	burstImage.src = IMG_SRC + explosion.imgSrc;
+	assetsToLoad.push(burstImage);
+
 	// ********** SUBMARK: - sprites
 	var drones = [];
 	var gates = [];
+	var explosions = [];
+
+	function loadHandler() { 
+		//add listeners below...
+		canvas.addEventListener("mousemove", mousemoveHandler, false);
+
+		assetsLoaded++;
+		if(assetsLoaded == assetsToLoad.length) {
+			//Remove the load event listeners
+			for (var i = 0; i < assetsToLoad.length; i++) {
+				assetsToLoad[i].removeEventListener("load", loadHandler, false);
+			}
+			 
+			//Start the game
+			currentGameState = GAME_STATE.STARTING;
+		}
+	}
 
 	function startGame() {
 		//initalize characters
@@ -85,11 +146,44 @@
 	  	for (var i = 0; i < gates.length; i++) {
 			gates[i].updatePosition();	
 		}
+
+		//update explosions
+		for (var m = 0; m < explosions.length; m++) {
+			explosions[m].updateAnimation();	
+		}
+
+		droneNextSpawnTime -= Math.ceil(1000 / 60); //60fps
+		gateNextSpawnTime -= Math.ceil(1000 / 60);
+		if (droneNextSpawnTime <= 0) {
+			spawnDrones(); //resets droneNextSpawnTime
+		}
+		if (gateNextSpawnTime <= 0) {
+			spawnGate();
+		}
+	}
+
+	function togglePause() {
+		if (currentGameState == GAME_STATE.PLAYING) {
+			currentGameState = GAME_STATE.PAUSED;
+		} else if (currentGameState == GAME_STATE.PAUSED) {
+			currentGameState = GAME_STATE.PLAYING;
+		}
 	}
 
 	function endGame() {
 		//display some Game Over message and let the user restart the game
 		window.cancelAnimationFrame(animationLoop);
+	}
+
+	function applyMenuSettings() {
+		var inputMethod = $('input[name="inputMethod"]:checked').val();
+		if (inputMethod === "mouse") {
+			currentControlMethod = controlMethod.MOUSE;
+			canvas.addEventListener("mousemove", mousemoveHandler, false);
+		} else if (inputMethod === "kbd") {
+			currentControlMethod = controlMethod.KBD;
+			canvas.removeEventListener("mousemove", mousemoveHandler, false);
+		}
 	}
 
 	// ***************** MARK: - Event handlers
@@ -99,6 +193,8 @@
 		w: 119,
 		e: 101,
 		r: 114,
+		p: 80,
+		esc: 27,
 		left: 37,
 		up: 38,
 		right: 39,
@@ -122,6 +218,18 @@
 			case kbd.down:
 				player.moveDown = true;
 				break;
+			case kbd.p:
+	    		togglePause();
+	    		break;
+	    	case kbd.esc:
+	    		togglePause();
+	    		$("div#menu").toggle();
+	    		if (currentGameState == GAME_STATE.PLAYING) {
+	    			//apply new settings
+	    			applyMenuSettings();
+	    		}
+
+	    		break;
 	  	}
 	});
 
@@ -146,41 +254,20 @@
 	});
 
 	// ********* SUBMARK: - Have the player follow the mouse movement
-	var IS_MOUSE_MOVING = false;
-	var mouseMoveTimer = setTimeout(mouseStopped,300);
+	var mouseX;
+	var mouseY;
 	function mousemoveHandler(event) {
-		clearTimeout(mouseMoveTimer); //to see when the mouse stops moving
-		mouseMoveTimer = setTimeout(mouseStopped, 300);
-
-		IS_MOUSE_MOVING = true;
-
-		var mouseX = event.pageX - canvas.offsetLeft;
-		var mouseY = event.pageY - canvas.offsetTop;
+		mouseX = event.pageX - canvas.offsetLeft;
+		mouseY = event.pageY - canvas.offsetTop;
 		//console.log("x: " + mouseX + " y: " + mouseY);
 		
-		player.moveToPos(mouseX, mouseY);
-	}
-
-	function mouseStopped() {
-		IS_MOUSE_MOVING = false;
+		if ((Math.abs(mouseX - player.xPos) >= player.radius) || Math.abs(mouseY - player.yPos) >= player.radius) {
+			//only move the player if mouse is not over the player (this prevents jittery movement)
+			player.moveToPos(mouseX, mouseY);	
+		}
 	}
 
 	// ***************** MARK: - after page has loaded, animation and rendering
-	function loadHandler() { 
-		//add listeners below...
-		canvas.addEventListener("mousemove", mousemoveHandler, false);
-
-		assetsLoaded++;
-		if(assetsLoaded == assetsToLoad.length) {
-			//Remove the load event listener
-			gateImage.removeEventListener("load", loadHandler, false);
-			 
-			//Start the game
-			currentGameState = GAME_STATE.STARTING;
-		}
-		console.log(currentGameState);
-	}
-
 	function updateAnimation() { 
 	  	// Call updateAnimation at a smooth rate (depends on computer display's refresh rate)
 	  	// you could optionally use a timer
@@ -194,6 +281,9 @@
 	  			break;
 	  		case GAME_STATE.PLAYING:
 	  			playGame();
+	  			break;
+	  		case GAME_STATE.PAUSED:
+	  			//do nothing
 	  			break;
 	  		case GAME_STATE.ENDED:
 	  			endGame();
@@ -227,9 +317,20 @@
 		for (var m = 0; m < gates.length; m++) {
 			gates[m].draw();	
 		}
+
+		//draw all the explosions
+		for (var n = 0; n < explosions.length; n++) {
+			explosions[n].draw();	
+		}
 	}
 
 	$(document).ready(function() {
+		//center the menu
+		var menuHeight = $("div#menu").outerHeight(); 
+		var menuWidth = $("div#menu").outerWidth();
+		$("div#menu").css("left", (canvas.width / 2) - (menuWidth / 2))
+			.css("top", (canvas.height / 2) - (menuHeight / 2));
+
 	  	//Start the animation loop
 	  	updateAnimation();
 	});

@@ -1,6 +1,5 @@
 var droneSpawnAmount = 20;
-var droneSpawnTimer;
-var droneSpawnFrequency = 5000; //every 5 seconds, spawn droneSpawnAmount of drones 
+var droneNextSpawnTime; //time till next spawn (random b/t 3-5 seconds)
 var drone = {
 	radius: 9,
 	color: "Cyan",
@@ -34,7 +33,7 @@ var drone = {
 		drawingSurface.beginPath();
 		drawingSurface.arc(Math.floor(this.xPos), Math.floor(this.yPos), this.radius, 0, 2 * Math.PI, false);
 		drawingSurface.fillStyle = this.color;
-      	drawingSurface.fill();
+      	drawingSurface.fill();	
 	},
 
 	spawn: function(corner) { 
@@ -82,6 +81,16 @@ var drone = {
 		this.xPos = randX;
 		this.yPos = randY;
 		drones.push(this); //this is an array in the game.html
+	},
+
+	die: function() {
+		removeObjectFromArray(this, drones);
+
+		var newExplosion = Object.create(explosion);
+		newExplosion.xPos = this.xPos - this.radius;
+		newExplosion.yPos = this.yPos - this.radius;
+		//newExplosion.displaySize = this.radius;
+		explosions.push(newExplosion);
 	}
 };
 function spawnDrones() {
@@ -95,10 +104,44 @@ function spawnDrones() {
 		newDrone.spawn(droneSpawnLoc);	
 	}
 
-	if (typeof droneSpawnTimer != 'undefined') {
-		clearTimeout(droneSpawnTimer);	
+	var maxFreq = 5000;
+	var minFreq = 3000;
+	droneNextSpawnTime = Math.floor(Math.random() * (maxFreq - minFreq) + minFreq);
+}
+
+var explosion = {
+	imgSrc: "burst.png",
+	imgSize: 92,
+	displaySize: 20, //pixels
+	COLUMNS: 3, //change this to = the number of frames you have per row on your tile sheet
+	numberOfFrames: 17, //18 - 1
+	currentFrame: 0,
+	sourceX: 0,
+	sourceY: 0,
+
+	xPos: 0,
+	yPos: 0,
+
+	updateAnimation: function() {
+		//Find the frame's correct column and row on the tilesheet
+		this.sourceX = Math.floor(this.currentFrame % this.COLUMNS) * this.imgSize;
+		this.sourceY = Math.floor(this.currentFrame / this.COLUMNS) * this.imgSize;
+		
+		if(this.currentFrame < this.numberOfFrames) {
+			this.currentFrame++;
+		} else {
+			removeObjectFromArray(this, explosions);
+		}
+	},
+
+	draw: function() {
+		//Draw the monster's current animation frame
+		drawingSurface.drawImage (
+			burstImage,
+			this.sourceX, this.sourceY, this.imgSize, this.imgSize,
+			this.xPos, this.yPos, this.displaySize, this.displaySize
+		);
 	}
-	droneSpawnTimer = setTimeout(spawnDrones, droneSpawnFrequency); //reset timer to spawn in another droneSpawnTime seconds
 }
 
 var player = {
@@ -125,29 +168,40 @@ var player = {
 	},
 
 	updatePosition: function() {
-		//Up
-		if (this.moveUp && !this.moveDown) {
-			this.yVel = -this.movementSpeed;
-		}
-		//Down
-		if (this.moveDown && !this.moveUp) {
-			this.yVel = this.movementSpeed;
-		}
-		//Left
-		if (this.moveLeft && !this.moveRight) {
-			this.xVel = -this.movementSpeed;
-		}
-		//Right
-		if (this.moveRight && !this.moveLeft) {
-			this.xVel = this.movementSpeed;
-		}
+		if (currentControlMethod == controlMethod.KBD) {
+			//Up
+			if (this.moveUp && !this.moveDown) {
+				this.yVel = -this.movementSpeed;
+			}
+			//Down
+			if (this.moveDown && !this.moveUp) {
+				this.yVel = this.movementSpeed;
+			}
+			//Left
+			if (this.moveLeft && !this.moveRight) {
+				this.xVel = -this.movementSpeed;
+			}
+			//Right
+			if (this.moveRight && !this.moveLeft) {
+				this.xVel = this.movementSpeed;
+			}
 
-		//Set the player's velocity to zero if none of the keys are being pressed
-		if (!IS_MOUSE_MOVING && !this.moveUp && !this.moveDown) { //only set velocity to zero if mouse is not moving (otherwise we want the player to track the mouse)
-			this.yVel = 0;
-		}
-		if (!IS_MOUSE_MOVING && !this.moveLeft && !this.moveRight) {
-			this.xVel = 0;
+			//Set the player's velocity to zero if none of the keys are being pressed
+			if (!this.moveUp && !this.moveDown) { //only set velocity to zero if mouse is not moving (otherwise we want the player to track the mouse)
+				this.yVel = 0;
+			}
+			if (!this.moveLeft && !this.moveRight) {
+				this.xVel = 0;
+			}	
+		} else if (currentControlMethod == controlMethod.MOUSE) { 
+			//stop the player if he's within a certain distance of the mouse
+			var errorFactor = 0.32;
+			if (Math.abs(this.xPos - mouseX) < this.radius * errorFactor) { 
+				this.xVel = 0;
+			} 
+			if (Math.abs(this.yPos - mouseY) < this.radius * errorFactor) {
+				this.yVel = 0;
+			}
 		}
 
 		//Move the player and keep it inside screen boundaries
@@ -191,7 +245,7 @@ var player = {
 };
 
 var gateSpawnTimer;
-var gateSpawnFrequency = 8000; //every 5 seconds, spawn droneSpawnAmount of drones 
+var gateNextSpawnTime;
 var gate = {
 	imgSrc: "gate.png",
 
@@ -204,6 +258,7 @@ var gate = {
 	height: 15,
 	xPos: 0,
 	yPos: 0,
+	blastRadius: 200,
 	
 	rotation: 0,
 	rotationSpeed: 0.6, //degrees per frame
@@ -268,6 +323,21 @@ var gate = {
 	},
 
 	explode: function() {
+		/**
+			Check for drones in a certain radius and kill them
+		*/
+		for (var i = drones.length - 1; i >= 0; i--) { //start from end, so you don't skip any
+			var d = drones[i];
+			var dx = d.xPos - this.xPos;
+			var dy = d.yPos - this.yPos;
+
+			var dist2 = dx*dx + dy*dy;
+
+			if (dist2 < (this.blastRadius * this.blastRadius)) { //if within the blastRadius, kill the drone
+				d.die();
+			}
+		}
+
 		removeObjectFromArray(this, gates);
 	},
 
@@ -294,5 +364,8 @@ function spawnGate() {
 	if (typeof gateSpawnTimer != 'undefined') {
 		clearTimeout(gateSpawnTimer);	
 	}
-	gateSpawnTimer = setTimeout(spawnGate, gateSpawnFrequency); //reset timer to spawn in another gateSpawnFrequency seconds
+
+	var maxFreq = 6000;
+	var minFreq = 4000;
+	gateNextSpawnTime = Math.floor(Math.random() * (maxFreq - minFreq) + minFreq);
 }
