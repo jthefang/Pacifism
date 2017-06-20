@@ -1,11 +1,13 @@
 body {
 	margin: 0;
+	font-family: Helvetica, Arial;
 }
 
 html {
 	overflow: hidden; /* remove scrollbars */
 }
 
+/***********************************************	CONTAINER 		*******************/
 div#container {
 	position: relative;
 }
@@ -29,9 +31,28 @@ td {
 	padding: 0.5em;
 }
 
-p#help_hint {
-	margin: 0;
-	padding: 0.3em 0 0 0.3em; /*top and left*/
-
+p {
 	color: white;
+	display: inline-block;
+	margin: 0;
+	padding: 1em;
+}
+
+p#help_hint {
+	float: left;
+}
+
+p#score {
+	float: right;
+	font-family: LCD;
+	font-size: 1.8em;
+}
+
+/********************************************* 		FONTS 			*******************/ 
+@font-face {
+    font-family: 'LCD';
+    src: url('../fonts/open_24_display_st-webfont.woff2') format('woff2'),
+         url('../fonts/open_24_display_st-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
 }

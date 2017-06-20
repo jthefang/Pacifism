@@ -1,11 +1,9 @@
-<!-- TODO 
-	Score
+<!-- TODO
+	If you touch edge of gates, you die!
 
-	Have the game level up
+	Have the game level up, pt multipliers
 
 	Add techno music sound FX
-
-	Player mouse movement targetting, use if to move the player differently/updatePosition if the mouse is being used
 
 	Slightly accelerate the player/drones when beginning to move, changing directions, coming to a stop
 -->
@@ -19,6 +17,22 @@
   <script src="sprites.js"></script>
 </head>
 
+<audio id="theme">
+	<source src="../sounds/theme.mp3" type="audio/mpeg" loop>
+</audio>
+<audio id="game_start">
+	<source src="../sounds/game_start.mp3" type="audio/mpeg">
+</audio>
+<audio id="game_over">
+	<source src="../sounds/game_over.mp3" type="audio/mpeg">
+</audio>
+<audio id="drone_spawn">
+	<source src="../sounds/drone_spawn.mp3" type="audio/mpeg">
+</audio>
+<audio id="gate_explode">
+	<source src="../sounds/gate_explode.mp3" type="audio/mpeg">
+</audio>
+
 <div id="container">
 	<canvas>Your browser doesn't support canvas. Please upgrade it. We recommend <a href = ”https://www.google.com/chrome/index.html”>Google Chrome</a>.</canvas>
 
@@ -26,13 +40,14 @@
 		<form>
 		  <input type="radio" name="inputMethod" id="mouse" value="mouse" checked><label for="mouse"> Mouse</label><br>
 		  <input type="radio" name="inputMethod" id="kbd" value="kbd"><label for="kbd"> Keyboard</label><br>
+		  <input type="checkbox" name="endable" id="endable" value="endable" checked><label for="endable"> Endable</label><br>
 		</form>
 		<br>
 
 		<table>
 			<tr>
-				<td>P</td>
-				<td>Pause/Play</td>
+				<td>ESC</td>
+				<td>Open menu (Pause/Play)</td>
 			</tr>
 
 			<tr>
@@ -43,24 +58,29 @@
 	</div>	
 
 	<p id="help_hint">Press ESC for Menu</p>
+	<p id="score"></p>
 </div>
 
 <script>
 	
-	// ***************** Basic instance variables
+	/******************************		INSTANCE VARIABLES 		*******************/
 	var WINDOW_HEIGHT = $(window).innerHeight();
 	var WINDOW_WIDTH = $(window).innerWidth();
 
-	//Set up the canvas and drawing surface
+	/******************************		CANVAS SETUP 		***********************/
 	var canvas = document.querySelector("canvas");
 	canvas.width = WINDOW_WIDTH;
     canvas.height = WINDOW_HEIGHT;
 	var drawingSurface = canvas.getContext("2d");
 	
 	var IMG_SRC = "../images/";
-	// ***************** MARK: - game stuff
+
+	/******************************		GAME STUFF 		*******************/
 	var endable = true; //will determine whether the game ends if player collides with drones
-	
+	var ended = false;
+	var gameScore = 0;
+	var gameSpeed = 1; //should ramp up logarithmically with the score
+
 	var controlMethod = {
 		MOUSE: 0,
 		KBD: 1
@@ -81,6 +101,7 @@
 	var assetsToLoad = [];
 	var assetsLoaded = 0;
 
+	// ********************************** IMAGES
 	var gateImage = new Image();
 	gateImage.addEventListener("load", loadHandler, false);
 	gateImage.src = IMG_SRC + gate.imgSrc;
@@ -91,6 +112,32 @@
 	burstImage.src = IMG_SRC + explosion.imgSrc;
 	assetsToLoad.push(burstImage);
 
+	// ********************************** SOUNDS
+	var themeMP3 = document.querySelector("#theme"); //get reference to the sound
+	themeMP3.addEventListener("canplaythrough", loadHandler, false); //means that the sound has been completely loaded
+	themeMP3.load(); //load into JS
+	assetsToLoad.push(themeMP3);
+
+	var game_startMP3 = document.querySelector("#game_start"); //get reference to the sound
+	game_startMP3.addEventListener("canplaythrough", loadHandler, false); //means that the sound has been completely loaded
+	game_startMP3.load(); //load into JS
+	assetsToLoad.push(game_startMP3);
+
+	var game_overMP3 = document.querySelector("#game_over"); //get reference to the sound
+	game_overMP3.addEventListener("canplaythrough", loadHandler, false); //means that the sound has been completely loaded
+	game_overMP3.load(); //load into JS
+	assetsToLoad.push(game_overMP3);
+
+	var drone_spawnMP3 = document.querySelector("#drone_spawn"); //get reference to the sound
+	drone_spawnMP3.addEventListener("canplaythrough", loadHandler, false); //means that the sound has been completely loaded
+	drone_spawnMP3.load(); //load into JS
+	assetsToLoad.push(drone_spawnMP3);
+
+	var gate_explodeMP3 = document.querySelector("#gate_explode"); //get reference to the sound
+	gate_explodeMP3.addEventListener("canplaythrough", loadHandler, false); //means that the sound has been completely loaded
+	gate_explodeMP3.load(); //load into JS
+	assetsToLoad.push(gate_explodeMP3);
+
 	// ********** SUBMARK: - sprites
 	var drones = [];
 	var gates = [];
@@ -98,15 +145,20 @@
 
 	function loadHandler() { 
 		//add listeners below...
-		canvas.addEventListener("mousemove", mousemoveHandler, false);
+		window.addEventListener("mousemove", mousemoveHandler, false);
 
 		assetsLoaded++;
 		if(assetsLoaded == assetsToLoad.length) {
 			//Remove the load event listeners
-			for (var i = 0; i < assetsToLoad.length; i++) {
-				assetsToLoad[i].removeEventListener("load", loadHandler, false);
-			}
-			 
+			gateImage.removeEventListener("load", loadHandler, false);
+			burstImage.removeEventListener("load", loadHandler, false);
+
+			themeMP3.removeEventListener("canplaythrough", loadHandler, false);
+			game_startMP3.removeEventListener("canplaythrough", loadHandler, false);
+			game_overMP3.removeEventListener("canplaythrough", loadHandler, false);
+			drone_spawnMP3.removeEventListener("canplaythrough", loadHandler, false);
+			gate_explodeMP3.removeEventListener("canplaythrough", loadHandler, false);
+
 			//Start the game
 			currentGameState = GAME_STATE.STARTING;
 		}
@@ -117,6 +169,17 @@
 		player.spawn();
 		spawnDrones();
 		spawnGate();
+
+		game_startMP3.volume = 1;
+		game_startMP3.play();
+		//Loop play the themeMP3
+		themeMP3.addEventListener('ended', function() {
+		    this.currentTime = 0;
+		    this.play();
+		}, false);
+		themeMP3.volume = 1.0; //start volume at max
+		themeMP3.currentTime = 0; //start at beginning
+		themeMP3.play();
 
 		currentGameState = GAME_STATE.PLAYING;
 	}
@@ -137,7 +200,7 @@
 
 		//check for player collision with a drone
 		for (var k = 0; k < drones.length; k++) {
-			if (collisionCircle(player, drones[k]) && endable) {
+			if (collisionCircle(player, drones[k]) && !drones[k].dead && endable) {
 				currentGameState = GAME_STATE.ENDED;
 			}
 		}
@@ -160,19 +223,27 @@
 		if (gateNextSpawnTime <= 0) {
 			spawnGate();
 		}
+
+		updateGameLevel();
 	}
 
 	function togglePause() {
 		if (currentGameState == GAME_STATE.PLAYING) {
 			currentGameState = GAME_STATE.PAUSED;
+			themeMP3.pause();
 		} else if (currentGameState == GAME_STATE.PAUSED) {
 			currentGameState = GAME_STATE.PLAYING;
+			themeMP3.play();
 		}
 	}
 
 	function endGame() {
+		ended = true;
+
 		//display some Game Over message and let the user restart the game
-		window.cancelAnimationFrame(animationLoop);
+		themeMP3.pause();
+		game_overMP3.volume = 1.0;
+		game_overMP3.play();
 	}
 
 	function restartGame() {
@@ -180,7 +251,14 @@
 		gates = [];
 		explosions = [];
 
-		startGame();
+		droneSpawnAmount = INITIAL_DRONE_SPAWN_AMOUNT;
+		gateSpawnAmount = INITIAL_GATE_SPAWN_AMOUNT;
+
+		ended = false;
+		gameScore = 0;
+		gameSpeed = 1;
+
+		startGame();	
 	}
 
 	function applyMenuSettings() {
@@ -192,9 +270,32 @@
 			currentControlMethod = controlMethod.KBD;
 			canvas.removeEventListener("mousemove", mousemoveHandler, false);
 		}
+
+		endable = $("input#endable").is(":checked");
 	}
 
-	// ***************** MARK: - Event handlers
+	function updateGameLevel() {
+		//ramp up gamespeed
+		if (gameScore > 10000) {
+			gameSpeed = 2.0;
+			droneSpawnAmount = 40;
+			console.log("speed: " + gameSpeed, droneSpawnAmount, gateSpawnAmount);
+		} else if (gameScore > 5000) {
+			gameSpeed = 1.7;
+			gateSpawnAmount = 3;
+			droneSpawnAmount = 30;
+			console.log("speed: " + gameSpeed, droneSpawnAmount, gateSpawnAmount);
+		} else if (gameScore > 3000) {
+			gameSpeed = 1.5;
+			console.log("speed: " + gameSpeed, droneSpawnAmount, gateSpawnAmount);
+		} else if (gameScore > 1000) { //log(0) undef
+			gameSpeed = 1.2;
+			gateSpawnAmount = 2;
+			console.log("speed: " + gameSpeed, droneSpawnAmount, gateSpawnAmount);
+		} 
+	}
+
+	/******************************		EVENT HANDLERS 		*******************/
 	// ********* SUBMARK: - keyboard stuff
 	var kbd = {
 		r: 82,
@@ -208,7 +309,6 @@
 
 	$(document).keydown(function(e) {
 		var key = e.which;
-	    //console.log(key);
 
 	    switch(key) { 
 			case kbd.left:
@@ -223,15 +323,16 @@
 			case kbd.down:
 				player.moveDown = true;
 				break;
-			case kbd.p:
-	    		togglePause();
-	    		break;
 	    	case kbd.r:
-	    		restartGame();
+	    		if (!$("div#menu").is(':visible')) { //only if menu is not open
+	    			restartGame();	
+	    		}
 	    		break;
 	    	case kbd.esc:
 	    		togglePause();
+
 	    		$("div#menu").toggle();
+	    		
 	    		if (currentGameState == GAME_STATE.PLAYING) {
 	    			//apply new settings
 	    			applyMenuSettings();
@@ -242,7 +343,6 @@
 
 	$(document).keyup(function(e) {
 		var key = e.which;
-	    //console.log(key);
 
 	    switch(key) { 
 			case kbd.left:
@@ -274,7 +374,7 @@
 		}
 	}
 
-	// ***************** MARK: - after page has loaded, animation and rendering
+	/**********************		DOC READY, ANIMATION & RENDERING 	************/
 	function updateAnimation() { 
 	  	// Call updateAnimation at a smooth rate (depends on computer display's refresh rate)
 	  	// you could optionally use a timer
@@ -293,7 +393,14 @@
 	  			//do nothing
 	  			break;
 	  		case GAME_STATE.ENDED:
-	  			endGame();
+	  			if (endable) {
+		  			if (!ended) { //only call endGame once
+			  			endGame();
+		  			}
+	  			} else {
+	  				playGame();
+	  			}
+
 	  			break;
 	  	}
 	  	
@@ -329,6 +436,9 @@
 		for (var n = 0; n < explosions.length; n++) {
 			explosions[n].draw();	
 		}
+
+		//show score
+		$("p#score").text(gameScore.toString());
 	}
 
 	$(document).ready(function() {

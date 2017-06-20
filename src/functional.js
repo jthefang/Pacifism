@@ -1,4 +1,4 @@
-// ******** MARK: - collision detection
+/**************************	COLLISON DETECTION 	*******************/
 function collisionCircle(c1, c2) {
 	//Calculate the vector between the circles' center points
 	var vx = c1.xPos - c2.xPos;
@@ -28,9 +28,11 @@ function blockCircleOverlap(c1, c2) {
 		//Find the unit vector (the direction of the collision towards c1)
 		dx = vx / magnitude;
 		dy = vy / magnitude;
+
 		//Move circle 1 out of the collision by multiplying the overlap with the normalized vector and add it to circle 1's position (move circle 1 in the direction away from circle 2 by the amount of their overlap)
-		c1.xPos += overlap * dx;
-		c1.yPos += overlap * dy;
+		var errorMargin = 1.0; //1 is zero
+		c1.xPos += overlap * dx * errorMargin;
+		c1.yPos += overlap * dy * errorMargin;
 	}
 }
 

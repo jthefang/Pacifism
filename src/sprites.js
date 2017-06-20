@@ -1,7 +1,10 @@
-var droneSpawnAmount = 20;
+/***********************************************	DRONE 		*******************/
+var INITIAL_DRONE_SPAWN_AMOUNT = 20;
+var droneSpawnAmount = INITIAL_DRONE_SPAWN_AMOUNT;
 var droneNextSpawnTime; //time till next spawn (random b/t 3-5 seconds)
 var drone = {
 	radius: 9,
+	dead: false, //to prevent a weird afterdeath collision bug
 	color: "Cyan",
 
 	xPos: 0,
@@ -10,6 +13,7 @@ var drone = {
 	movementSpeed: 6,
 	xVel: 0,
 	yVel: 0,
+	pts: 15, //how many pts the player gets for killing this drone
 
 	moveToPos: function(newX, newY) { //decomposes velocity into appropriate x and y based off drones sum total movement speed and sets target x and y
 		var dx = newX - this.xPos;
@@ -84,6 +88,7 @@ var drone = {
 	},
 
 	die: function() {
+		this.dead = true;
 		removeObjectFromArray(this, drones);
 
 		var newExplosion = Object.create(explosion);
@@ -91,9 +96,14 @@ var drone = {
 		newExplosion.yPos = this.yPos - this.radius;
 		//newExplosion.displaySize = this.radius;
 		explosions.push(newExplosion);
+
+		gameScore += this.pts;
 	}
 };
 function spawnDrones() {
+	drone_spawnMP3.volume = 0.3;
+	drone_spawnMP3.play();
+
 	var droneSpawnLoc = Math.floor(Math.random() * 4);
 	while (droneSpawnLoc == player.inCorner()) { //don't spawn drones in the same corner as the player
 		droneSpawnLoc = Math.floor(Math.random() * 4);
@@ -104,11 +114,13 @@ function spawnDrones() {
 		newDrone.spawn(droneSpawnLoc);	
 	}
 
-	var maxFreq = 5000;
-	var minFreq = 3000;
+	//adjusted to gameSpeed
+	var maxFreq = 5000 / gameSpeed;
+	var minFreq = 3000 / gameSpeed;
 	droneNextSpawnTime = Math.floor(Math.random() * (maxFreq - minFreq) + minFreq);
 }
 
+/***********************************************	EXPLOSION 		***************/
 var explosion = {
 	imgSrc: "burst.png",
 	imgSize: 92,
@@ -126,8 +138,8 @@ var explosion = {
 		//Find the frame's correct column and row on the tilesheet
 		this.sourceX = Math.floor(this.currentFrame % this.COLUMNS) * this.imgSize;
 		this.sourceY = Math.floor(this.currentFrame / this.COLUMNS) * this.imgSize;
-		
-		if(this.currentFrame < this.numberOfFrames) {
+
+		if (this.currentFrame < this.numberOfFrames) {
 			this.currentFrame++;
 		} else {
 			removeObjectFromArray(this, explosions);
@@ -144,6 +156,7 @@ var explosion = {
 	}
 }
 
+/***********************************************	PLAYER 		*******************/
 var player = {
 	radius: 12,
 	color: "white",
@@ -244,6 +257,9 @@ var player = {
 	}	
 };
 
+/***********************************************	GATE 		*******************/
+var INITIAL_GATE_SPAWN_AMOUNT = 1;
+var gateSpawnAmount = INITIAL_GATE_SPAWN_AMOUNT;
 var gateSpawnTimer;
 var gateNextSpawnTime;
 var gate = {
@@ -269,10 +285,34 @@ var gate = {
 
 	updatePosition: function() {
 		this.rotation += this.rotationSpeed;
-      	if (this.checkCollisionWith(player)) {
+
+		if (this.checkBorderBallCollision() && endable) {
+			currentGameState = GAME_STATE.ENDED;
+		} else if (this.checkCollisionWith(player)) {
       		this.explode();
       	}
 	},
+
+	/*endPts: function() { //draws the endpts of the gate (uncomment in draw() function below)
+		var angle = this.rotation * Math.PI / 180;
+		var halfLength = (this.width / 2) - 8; //the offset is to center the endPt on the gate ball
+		
+		endX = this.xPos + (halfLength)*(Math.cos(angle));
+		endY = this.yPos + (halfLength)*(Math.sin(angle));
+		endX1 = this.xPos - (halfLength)*(Math.cos(angle));
+		endY1 = this.yPos - (halfLength)*(Math.sin(angle));
+		
+		var endRadius = 8;
+		drawingSurface.beginPath();
+		drawingSurface.arc(Math.floor(endX), Math.floor(endY), endRadius, 0, 2 * Math.PI, false);
+		drawingSurface.fillStyle = "red";
+      	drawingSurface.fill();
+
+		drawingSurface.beginPath();
+		drawingSurface.arc(Math.floor(endX1), Math.floor(endY1), endRadius, 0, 2 * Math.PI, false);
+		drawingSurface.fillStyle = "green";
+      	drawingSurface.fill();
+	},*/
 
 	draw: function() {
 		//Save the current state of the drawing surface before it's rotated
@@ -296,6 +336,7 @@ var gate = {
 		//Restore the drawing surface to its state before it was rotated (but this time with the rotated sprite still in place)
 		drawingSurface.restore();
 
+		//this.endPts();
 		/*
 		//also draw a dot at the center of the gate)
 		drawingSurface.beginPath();
@@ -322,6 +363,28 @@ var gate = {
 		return false;
 	},
 
+	checkBorderBallCollision: function(circle) {
+		var angle = this.rotation * Math.PI / 180;
+		var halfLength = (this.width / 2) - 8; //the offset is to center the endPt on the gate ball
+		
+		endX = this.xPos + (halfLength)*(Math.cos(angle));
+		endY = this.yPos + (halfLength)*(Math.sin(angle));
+		var ball = Object.create(gateEnd);
+		ball.xPos = endX;
+		ball.yPos = endY;
+
+		endX1 = this.xPos - (halfLength)*(Math.cos(angle));
+		endY1 = this.yPos - (halfLength)*(Math.sin(angle));
+		var bomb = Object.create(gateEnd);
+		bomb.xPos = endX1;
+		bomb.yPos = endY1;
+
+		if (collisionCircle(ball, player) || collisionCircle(bomb, player)) {
+			return true;
+		}
+		return false;
+	},
+
 	explode: function() {
 		/**
 			Check for drones in a certain radius and kill them
@@ -338,6 +401,9 @@ var gate = {
 			}
 		}
 
+		gate_explodeMP3.volume = 1;
+		gate_explodeMP3.play();
+
 		removeObjectFromArray(this, gates);
 	},
 
@@ -351,21 +417,41 @@ var gate = {
 		var randY = Math.floor(Math.random() * (maxY - minY) + minY); 
 		var randAngle = Math.floor(Math.random() * 180);
 
+		//Make sure gate doesn't spawn too close to player
+		var dx = player.xPos - randX;
+		var dy = player.yPos - randY;
+		var distToPlayer = dx*dx + dy*dy;
+		var minDist = player.radius + (this.width / 2) + 30; //spawn gate minimum of ____ pixels away from player
+		while (distToPlayer < minDist*minDist) { //to circumvent sqrting
+			randX = Math.floor(Math.random() * (maxX - minX) + minX); 
+			randY = Math.floor(Math.random() * (maxY - minY) + minY); 
+		}
+
 		this.xPos = randX;
 		this.yPos = randY;
 		this.rotation = randAngle;
 		gates.push(this); //this is an array in the game.html
 	}
 };
+/**
+	The border bombs at the ends of the gate; player collision with these is fatal.
+*/
+var gateEnd = { 
+	xPos: 0,
+	yPos: 0,
+	radius: 7
+}
 function spawnGate() {
-	var newGate = Object.create(gate);
-	newGate.spawn();	
+	for (var i = 0; i < gateSpawnAmount; i++) {
+		var newGate = Object.create(gate);
+		newGate.spawn();	
+	}
 
 	if (typeof gateSpawnTimer != 'undefined') {
 		clearTimeout(gateSpawnTimer);	
 	}
 
-	var maxFreq = 6000;
-	var minFreq = 4000;
+	var maxFreq = 6000 / gameSpeed;
+	var minFreq = 2000 / gameSpeed;
 	gateNextSpawnTime = Math.floor(Math.random() * (maxFreq - minFreq) + minFreq);
 }
