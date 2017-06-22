@@ -1,6 +1,4 @@
 <!-- TODO
-	If you touch edge of gates, you die!
-
 	Have the game level up, pt multipliers
 
 	Add techno music sound FX
@@ -40,7 +38,7 @@
 		<form>
 		  <input type="radio" name="inputMethod" id="mouse" value="mouse" checked><label for="mouse"> Mouse</label><br>
 		  <input type="radio" name="inputMethod" id="kbd" value="kbd"><label for="kbd"> Keyboard</label><br>
-		  <input type="checkbox" name="endable" id="endable" value="endable" checked><label for="endable"> Endable</label><br>
+		  <input type="checkbox" name="endable" id="endable" value="endable"><label for="endable"> God mode</label><br>
 		</form>
 		<br>
 
@@ -185,6 +183,8 @@
 	}
 
 	function playGame() {
+		console.log(currentGameState);
+
 		//update players position
 	  	player.updatePosition();
 
@@ -242,6 +242,7 @@
 
 		//display some Game Over message and let the user restart the game
 		themeMP3.pause();
+		game_overMP3.currentTime = 0;
 		game_overMP3.volume = 1.0;
 		game_overMP3.play();
 	}
@@ -252,11 +253,13 @@
 		explosions = [];
 
 		droneSpawnAmount = INITIAL_DRONE_SPAWN_AMOUNT;
-		gateSpawnAmount = INITIAL_GATE_SPAWN_AMOUNT;
+		maxGateSpawnAmount = INITIAL_GATE_SPAWN_AMOUNT;
 
 		ended = false;
 		gameScore = 0;
 		gameSpeed = 1;
+
+		game_overMP3.pause(); //if it's playing
 
 		startGame();	
 	}
@@ -271,7 +274,7 @@
 			canvas.removeEventListener("mousemove", mousemoveHandler, false);
 		}
 
-		endable = $("input#endable").is(":checked");
+		endable = !$("input#endable").is(":checked");
 	}
 
 	function updateGameLevel() {
@@ -279,19 +282,15 @@
 		if (gameScore > 10000) {
 			gameSpeed = 2.0;
 			droneSpawnAmount = 40;
-			console.log("speed: " + gameSpeed, droneSpawnAmount, gateSpawnAmount);
 		} else if (gameScore > 5000) {
 			gameSpeed = 1.7;
-			gateSpawnAmount = 3;
+			maxGateSpawnAmount = 3;
 			droneSpawnAmount = 30;
-			console.log("speed: " + gameSpeed, droneSpawnAmount, gateSpawnAmount);
 		} else if (gameScore > 3000) {
 			gameSpeed = 1.5;
-			console.log("speed: " + gameSpeed, droneSpawnAmount, gateSpawnAmount);
-		} else if (gameScore > 1000) { //log(0) undef
+		} else if (gameScore > 1000) { 
 			gameSpeed = 1.2;
-			gateSpawnAmount = 2;
-			console.log("speed: " + gameSpeed, droneSpawnAmount, gateSpawnAmount);
+			maxGateSpawnAmount = 2;
 		} 
 	}
 

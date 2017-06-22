@@ -5,12 +5,13 @@ var droneNextSpawnTime; //time till next spawn (random b/t 3-5 seconds)
 var drone = {
 	radius: 9,
 	dead: false, //to prevent a weird afterdeath collision bug
+	spawnCooldown: 700, //give player time to react to drones spawning
 	color: "Cyan",
 
 	xPos: 0,
 	yPos: 0,
 	
-	movementSpeed: 6,
+	movementSpeed: 5,
 	xVel: 0,
 	yVel: 0,
 	pts: 15, //how many pts the player gets for killing this drone
@@ -25,11 +26,17 @@ var drone = {
 	},
 
 	updatePosition: function() {
-		this.moveToPos(player.xPos, player.yPos); //target player
+		if (this.spawnCooldown > 0) {
+			this.color = "#33A0FF";
+			this.spawnCooldown -= Math.ceil(1000/60); 
+		} else {
+			this.color = "Cyan";
+			this.moveToPos(player.xPos, player.yPos); //target player
 
-		//Move the player and keep it inside screen boundaries
-		this.xPos = Math.max(0 + this.radius, Math.min(this.xPos + this.xVel, canvas.width - this.radius));
-		this.yPos = Math.max(0 + this.radius, Math.min(this.yPos + this.yVel, canvas.height - this.radius));
+			//Move the drone and keep it inside screen boundaries
+			this.xPos = Math.max(0 + this.radius, Math.min(this.xPos + this.xVel, canvas.width - this.radius));
+			this.yPos = Math.max(0 + this.radius, Math.min(this.yPos + this.yVel, canvas.height - this.radius));
+		}
 	},
 
 	draw: function() {
@@ -163,7 +170,7 @@ var player = {
 	xPos: 0,
 	yPos: 0,
 	
-	movementSpeed: 8,
+	movementSpeed: 7,
 	moveLeft: false,
 	moveTop: false,
 	moveRight: false,
@@ -259,7 +266,7 @@ var player = {
 
 /***********************************************	GATE 		*******************/
 var INITIAL_GATE_SPAWN_AMOUNT = 1;
-var gateSpawnAmount = INITIAL_GATE_SPAWN_AMOUNT;
+var maxGateSpawnAmount = INITIAL_GATE_SPAWN_AMOUNT;
 var gateSpawnTimer;
 var gateNextSpawnTime;
 var gate = {
@@ -274,7 +281,7 @@ var gate = {
 	height: 15,
 	xPos: 0,
 	yPos: 0,
-	blastRadius: 200,
+	blastRadius: 250,
 	
 	rotation: 0,
 	rotationSpeed: 0.6, //degrees per frame
@@ -286,11 +293,11 @@ var gate = {
 	updatePosition: function() {
 		this.rotation += this.rotationSpeed;
 
-		if (this.checkBorderBallCollision() && endable) {
-			currentGameState = GAME_STATE.ENDED;
-		} else if (this.checkCollisionWith(player)) {
+		if (this.checkCollisionWith(player)) {
       		this.explode();
-      	}
+      	} else if (this.checkBorderBallCollision() && endable) {
+			currentGameState = GAME_STATE.ENDED;
+		}
 	},
 
 	/*endPts: function() { //draws the endpts of the gate (uncomment in draw() function below)
@@ -337,13 +344,14 @@ var gate = {
 		drawingSurface.restore();
 
 		//this.endPts();
+		
 		/*
-		//also draw a dot at the center of the gate)
+		//also draw a dot at the center of the gate or draw blastRadius
 		drawingSurface.beginPath();
-		drawingSurface.arc(Math.floor(this.xPos), Math.floor(this.yPos), 5, 0, 2 * Math.PI, false);
-		drawingSurface.fillStyle = "white";
-      	drawingSurface.fill();
-      	*/
+		drawingSurface.arc(Math.floor(this.xPos), Math.floor(this.yPos), this.blastRadius, 0, 2 * Math.PI, false);
+		drawingSurface.strokeStyle = "white";
+		drawingSurface.stroke();
+		*/
 	},
 
 	/**
@@ -353,10 +361,11 @@ var gate = {
 		//console.log(Math.atan2(this.yPos, this.xPos));
 		var dx = circle.xPos - this.xPos;
 		var dy = circle.yPos - this.yPos;
-		var distCircleGate = Math.sqrt((dx*dx) + (dy*dy));
+		var distCircleGate = (dx*dx) + (dy*dy);
 		var angleCircleGate = Math.atan2(dy, dx) - (this.rotation * Math.PI / 180);
-		if (Math.abs(distCircleGate * Math.cos(angleCircleGate)) < this.width / 2) {
-			if (Math.abs(distCircleGate * Math.sin(angleCircleGate)) < circle.radius) {
+		//avoid sqrting;
+		if (Math.abs(distCircleGate * square(Math.cos(angleCircleGate))) < square(this.width / 2)) {
+			if (Math.abs(distCircleGate * square(Math.sin(angleCircleGate))) < square(circle.radius)) {
 				return true;
 			}
 		}
@@ -402,6 +411,7 @@ var gate = {
 		}
 
 		gate_explodeMP3.volume = 1;
+		gate_explodeMP3.currentTime = 0;
 		gate_explodeMP3.play();
 
 		removeObjectFromArray(this, gates);
@@ -442,6 +452,7 @@ var gateEnd = {
 	radius: 7
 }
 function spawnGate() {
+	var gateSpawnAmount = Math.ceil(Math.random() * maxGateSpawnAmount); //random # b/t 1 -> maxGateSpawnAmount
 	for (var i = 0; i < gateSpawnAmount; i++) {
 		var newGate = Object.create(gate);
 		newGate.spawn();	

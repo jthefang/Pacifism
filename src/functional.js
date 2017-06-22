@@ -42,3 +42,7 @@ function removeObjectFromArray(objectToRemove, array) { //a general function to 
 		array.splice(i, 1);
 	}
 }
+
+function square(x) {
+	return x * x;
+}
