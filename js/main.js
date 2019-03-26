@@ -6,11 +6,17 @@ var game = {
 	init: function(canvas, drawingSurface) {
 		this.canvas = canvas;
 		this.drawingSurface = drawingSurface;
+		this.CORNERS = {
+			TOP_LEFT: 0,
+			TOP_RIGHT: 1,
+			BOTTOM_LEFT: 2,
+			BOTTOM_RIGHT: 3
+		}
 
-		this.endable = true; //will determine whether game ends when player collides with drones (=false if in god mode)
+		this.endable = true; //determines whether game ends if player dies (=false if in god mode)
 		this.ended = false;
 		this.gameScore = 0;
-		this.gameSpeed = 1; //should ramp up logarithmically with the score (controls spawning rates)
+		this.gameSpeed = 1; //should ramp up logarith. with the score (ctrls spawning rates)
 
 		this.controlMethod = {
 			MOUSE: 0,
@@ -65,30 +71,30 @@ var game = {
 		this.assetsToLoad.push(this.burstImage);
 
 		// ********************************** SOUNDS
-		this.themeMP3 = document.querySelector("#theme"); //get reference to the sound
+		/*this.themeMP3 = document.querySelector("#theme"); //get reference to the sound
 		this.themeMP3.load(); //load into JS
 		this.themeMP3.addEventListener("canplaythrough", loadHandler, false); //means that the sound has been completely loaded
 		this.assetsToLoad.push(this.themeMP3);
 
-		this.game_startMP3 = document.querySelector("#game_start"); //get reference to the sound
-		this.game_startMP3.load(); //load into JS
-		this.game_startMP3.addEventListener("canplaythrough", loadHandler, false); //means that the sound has been completely loaded
+		this.game_startMP3 = document.querySelector("#game_start"); 
+		this.game_startMP3.load(); 
+		this.game_startMP3.addEventListener("canplaythrough", loadHandler, false);
 		this.assetsToLoad.push(this.game_startMP3);
 
-		this.game_overMP3 = document.querySelector("#game_over"); //get reference to the sound
-		this.game_overMP3.load(); //load into JS
-		this.game_overMP3.addEventListener("canplaythrough", loadHandler, false); //means that the sound has been completely loaded
+		this.game_overMP3 = document.querySelector("#game_over"); 
+		this.game_overMP3.load(); 
+		this.game_overMP3.addEventListener("canplaythrough", loadHandler, false); 
 		this.assetsToLoad.push(this.game_overMP3);
 
-		this.drone_spawnMP3 = document.querySelector("#drone_spawn"); //get reference to the sound
-		this.drone_spawnMP3.load(); //load into JS
-		this.drone_spawnMP3.addEventListener("canplaythrough", loadHandler, false); //means that the sound has been completely loaded
+		this.drone_spawnMP3 = document.querySelector("#drone_spawn");
+		this.drone_spawnMP3.load();
+		this.drone_spawnMP3.addEventListener("canplaythrough", loadHandler, false);
 		this.assetsToLoad.push(this.drone_spawnMP3);
 
-		this.gate_explodeMP3 = document.querySelector("#gate_explode"); //get reference to the sound
-		this.gate_explodeMP3.load(); //load into JS
-		this.gate_explodeMP3.addEventListener("canplaythrough", loadHandler, false); //means that the sound has been completely loaded
-		this.assetsToLoad.push(this.gate_explodeMP3);
+		this.gate_explodeMP3 = document.querySelector("#gate_explode");
+		this.gate_explodeMP3.load();
+		this.gate_explodeMP3.addEventListener("canplaythrough", loadHandler, false);
+		this.assetsToLoad.push(this.gate_explodeMP3);*/
 	},
 
 	startGame: function() {
@@ -97,7 +103,7 @@ var game = {
 		this.drones.spawnDrones();
 		this.gates.spawnGate();
 
-		this.game_startMP3.volume = 1;
+		/*this.game_startMP3.volume = 1;
 		this.game_startMP3.play();
 		//Loop play the themeMP3
 		this.themeMP3.addEventListener('ended', function() {
@@ -105,7 +111,7 @@ var game = {
 		    this.play();
 		}, false);
 		this.themeMP3.volume = 1; //start volume at max
-		this.themeMP3.play();
+		this.themeMP3.play();*/
 
 		this.currentGameState = this.GAME_STATE.PLAYING;
 	},
@@ -122,10 +128,10 @@ var game = {
 	togglePause: function() {
 		if (this.currentGameState == this.GAME_STATE.PLAYING) {
 			this.currentGameState = this.GAME_STATE.PAUSED;
-			this.themeMP3.pause();
+			//this.themeMP3.pause();
 		} else if (this.currentGameState == this.GAME_STATE.PAUSED) {
 			this.currentGameState = this.GAME_STATE.PLAYING;
-			this.themeMP3.play();
+			//this.themeMP3.play();
 		}
 	},
 
@@ -133,10 +139,10 @@ var game = {
 		this.ended = true;
 
 		//display some Game Over message and let the user restart the game
-		this.themeMP3.pause();
+		/*this.themeMP3.pause();
 		this.game_overMP3.currentTime = 0;
 		this.game_overMP3.volume = 1.0;
-		this.game_overMP3.play();
+		this.game_overMP3.play();*/
 
 		$("div#game_over_div").show();
 	},
@@ -150,7 +156,7 @@ var game = {
 		this.gameScore = 0;
 		this.gameSpeed = 1;
 
-		this.game_overMP3.pause(); //if it's playing
+		//this.game_overMP3.pause(); //if it's playing
 
 		$("div#game_over_div").hide();
 		this.startGame();	
@@ -170,7 +176,7 @@ var game = {
 	},
 
 	updateGameLevel: function() {
-		let magnitudeOfScoreRampUp = 1000; //will get to 190% speed when score = 10x this amount
+		let magnitudeOfScoreRampUp = 1000; //will get to 190% speed when score=10x this amount
 		this.gameSpeed = 1 + (this.gameScore / (this.gameScore + magnitudeOfScoreRampUp));
 		//ramp up gameSpeed
 		if (this.gameScore > 10000) {
@@ -193,7 +199,6 @@ var game = {
 	  	
 	  	switch (this.currentGameState) {
 	  		case this.GAME_STATE.LOADING:
-
 	  			return;
 	  		case this.GAME_STATE.STARTING:
 				this.startGame();
@@ -320,14 +325,14 @@ function loadHandler(event) {
 		theGame.gateImage.removeEventListener("load", loadHandler, false);
 		theGame.burstImage.removeEventListener("load", loadHandler, false);
 
-		theGame.themeMP3.removeEventListener("canplaythrough", loadHandler, false);
+		/*theGame.themeMP3.removeEventListener("canplaythrough", loadHandler, false);
 		theGame.game_startMP3.removeEventListener("canplaythrough", loadHandler, false);
 		theGame.game_overMP3.removeEventListener("canplaythrough", loadHandler, false);
 		theGame.drone_spawnMP3.removeEventListener("canplaythrough", loadHandler, false);
-		theGame.gate_explodeMP3.removeEventListener("canplaythrough", loadHandler, false);
+		theGame.gate_explodeMP3.removeEventListener("canplaythrough", loadHandler, false);*/
 
 		//Start the game
-		setTimeout(function() { theGame.currentGameState = theGame.GAME_STATE.STARTING; }, 1500);
+		setTimeout(function() { theGame.currentGameState = theGame.GAME_STATE.STARTING; }, 0);
 	}
 }
 

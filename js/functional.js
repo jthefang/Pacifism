@@ -29,7 +29,10 @@ function blockCircleOverlap(c1, c2) {
 		dx = vx / magnitude;
 		dy = vy / magnitude;
 
-		//Move circle 1 out of the collision by multiplying the overlap with the normalized vector and add it to circle 1's position (move circle 1 in the direction away from circle 2 by the amount of their overlap)
+		/**
+			Move c1 in the direction away from c2 by the amount of their overlap
+			the direction away = vector c1 - c2
+		**/
 		var errorMargin = 1.0; //1 is zero
 		c1.xPos += overlap * dx * errorMargin;
 		c1.yPos += overlap * dy * errorMargin;

@@ -48,11 +48,11 @@ var drones = {
 	},
 
 	spawnDrones: function() {
-		this.game.drone_spawnMP3.volume = 0.3;
-		this.game.drone_spawnMP3.play();
+		/*this.game.drone_spawnMP3.volume = 0.3;
+		this.game.drone_spawnMP3.play();*/
 
 		var droneSpawnLoc = Math.floor(Math.random() * 4);
-		if (droneSpawnLoc == this.game.player.inCorner()) { //don't spawn drones in the same corner as the player
+		if (droneSpawnLoc == this.game.player.corner()) { //don't spawn drones in the same corner as the player
 			droneSpawnLoc = (droneSpawnLoc + 1) % 4;
 		}
 
@@ -93,7 +93,11 @@ var drone = {
 		this.pts = 15; //how many pts the player gets for killing this drone
 	},
 
-	moveToPos: function(newX, newY) { //decomposes velocity into appropriate x and y based off drones sum total movement speed and sets target x and y
+	/**
+		Decomposes velocity into appropriate dx and dy based off drone's sum
+		total movement speed and sets target x and y to be newX and new Y
+	**/
+	moveToPos: function(newX, newY) { 
 		var dx = newX - this.xPos;
 		var dy = newY - this.yPos;
 		var angle = Math.atan2(dy, dx)
@@ -129,27 +133,27 @@ var drone = {
 		var maxX = 0;
 		var minY = 0;
 		var maxY = 0;
-		//spawn in one of the four corners [0, 1, 2, 3]
+		//spawn in one of the four corners
 		switch(corner) {
-			case 0: //top left
+			case this.game.CORNERS.TOP_LEFT: //top left
 				minX = 0;
 				maxX = this.game.canvas.width / 4;
 				minY = 0;
 				maxY = this.game.canvas.height / 4;
 				break;
-			case 1: //top right
+			case this.game.CORNERS.TOP_RIGHT: //top right
 				minX = this.game.canvas.width * (3 / 4);
 				maxX = this.game.canvas.width;
 				minY = 0;
 				maxY = this.game.canvas.height / 4;
 				break;
-			case 2: //bottom right
+			case this.game.CORNERS.BOTTOM_RIGHT: //bottom right
 				minX = this.game.canvas.width * (3 / 4);
 				maxX = this.game.canvas.width;
 				minY = this.game.canvas.height * (3 / 4);
 				maxY = this.game.canvas.height;
 				break;
-			case 3: //bottom left
+			case this.game.CORNERS.BOTTOM_LEFT: //bottom left
 				minX = 0;
 				maxX = this.game.canvas.width / 4;
 				minY = this.game.canvas.height * (3 / 4);
@@ -349,19 +353,19 @@ var player = {
 	/**
 		Is the player in a corner, if so we shouldn't spawn drones there
 	*/
-	inCorner: function() {
+	corner: function() {
 		var marginOfError = 1.7;
 		if (this.xPos < (this.game.canvas.width / 4) * marginOfError) {
 			if (this.yPos < (this.game.canvas.height / 4) * marginOfError) {
-				return 0; //top left
+				return this.game.CORNERS.TOP_LEFT; //top left
 			} else if (this.yPos > (this.game.canvas.height * (3 / 4)) * (1 / marginOfError)) {
-				return 3; //bottom left
+				return this.game.CORNERS.BOTTOM_LEFT; //bottom left
 			}
 		} else if (this.xPos > (this.game.canvas.width * (3 / 4)) * (1 / marginOfError)) {
 			if (this.yPos < (this.game.canvas.height / 4) * marginOfError) {
-				return 1; //top right
+				return this.game.CORNERS.TOP_RIGHT; //top right
 			} else if (this.yPos > (this.game.canvas.height * (3 / 4)) * (1 / marginOfError)) {
-				return 2; //bottom right
+				return this.game.CORNERS.BOTTOM_RIGHT; //bottom right
 			}
 		}
 		return -1;
@@ -580,13 +584,13 @@ var gate = {
 			}
 		}
 
-		this.game.gate_explodeMP3.volume = 1;
+		/*this.game.gate_explodeMP3.volume = 1;
 		this.game.gate_explodeMP3.currentTime = 0;
-		this.game.gate_explodeMP3.play();
+		this.game.gate_explodeMP3.play();*/
 		this.game.gates.killGate(this);
 	},
 
-	spawn: function(corner) { 
+	spawn: function() { 
 		var maxX = this.game.canvas.width - this.width;
 		var maxY = this.game.canvas.height - this.width;
 		var minX = this.width;
@@ -600,7 +604,7 @@ var gate = {
 		var dx = this.game.player.xPos - randX;
 		var dy = this.game.player.yPos - randY;
 		var distToPlayer = dx*dx + dy*dy;
-		var minDist = this.game.player.radius + (this.width / 2) + 30; //spawn gate minimum of ____ pixels away from player
+		var minDist = 9*this.game.player.radius + (this.width / 2); //spawn gate minDist away from player
 		while (distToPlayer < minDist*minDist) { //to circumvent sqrting
 			randX = Math.floor(Math.random() * (maxX - minX) + minX); 
 			randY = Math.floor(Math.random() * (maxY - minY) + minY); 
