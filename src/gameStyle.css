@@ -17,7 +17,15 @@ canvas {
 	z-index: -1;
 }
 
-div#menu { /*some basic positioning done in the game.html document load function*/
+div#loading {
+	position: absolute;
+	padding: 1em;
+}
+p#loading_p {
+	color: black;
+}
+
+div#menu { /*some basic positioning done in the main.js document load function*/
 	position: absolute;
 
 	background-color: white;
@@ -46,6 +54,16 @@ p#score {
 	float: right;
 	font-family: LCD;
 	font-size: 1.8em;
+}
+
+div#game_over_div {
+	position: absolute;
+	display: none;
+	padding: 1em;
+}
+
+p#game_over_p {
+	text-align: center;
 }
 
 /********************************************* 		FONTS 			*******************/ 

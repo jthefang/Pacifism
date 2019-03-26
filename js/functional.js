@@ -22,7 +22,7 @@ function blockCircleOverlap(c1, c2) {
 	//Add together the circles' total radii
 	var totalRadii = c1.radius + c2.radius;
 
-	if(magnitude < totalRadii) { //Yes, a collision is happening.
+	if(collisionCircle(c1, c2)) { //Yes, a collision is happening.
 		//Find the amount of overlap between the circles
 		var overlap = totalRadii - magnitude;
 		//Find the unit vector (the direction of the collision towards c1)
@@ -39,7 +39,9 @@ function blockCircleOverlap(c1, c2) {
 function removeObjectFromArray(objectToRemove, array) { //a general function to remove objects from an array
 	var i = array.indexOf(objectToRemove);
 	if (i !== -1) {
+		let obj = array[i];
 		array.splice(i, 1);
+		return obj;
 	}
 }
 
